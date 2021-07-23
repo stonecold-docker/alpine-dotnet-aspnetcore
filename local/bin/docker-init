@@ -1,0 +1,36 @@
+#!/bin/sh
+
+set -e
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing required packages"
+PKG_LIB="ca-certificates libgcc libstdc++ icu-libs krb5-libs libintl userspace-rcu lttng-ust tzdata"
+PKG_DEV=""
+docker-install -r -u ${PKG_LIB} ${PKG_DEV}
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Installing dotnet-aspnetcore"
+mkdir -p /app/dotnet
+cd /app/dotnet
+DOTNET_ARCH=
+case "$(uname -m)" in
+	x86_64)
+		DOTNET_ARCH=x64
+		;;
+	aarch64)
+		DOTNET_ARCH=arm64
+		;;
+esac
+DOTNET_URL1="$(wget --no-check-certificate -q -O - https://dotnet.microsoft.com/download/dotnet/6.0 | grep 'runtime' | grep aspnetcore | grep "linux-${DOTNET_ARCH}-alpine-binaries" | head -1 | sed -e 's/^.*<a href="\([^"]*\)".*$/\1/g')"
+DOTNET_URL2="$(wget --no-check-certificate -q -O - https://dotnet.microsoft.com${DOTNET_URL1} | grep 'download manual' | grep "linux-musl-${DOTNET_ARCH}.tar.gz" | head -1 | sed -e 's/^.*<a href="\([^"]*\)".*$/\1/g')"
+wget --no-check-certificate -q -O - ${DOTNET_URL2} | tar zx
+ln -sf /app/dotnet /usr/share/dotnet
+ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> Uninstalling unnecessary packages"
+docker-install -d -c ${PKG_DEV}
+echo "[$(TZ="GMT-9" date '+%Y-%m-%d %H:%M:%S')] ==> OK"
+echo
+
